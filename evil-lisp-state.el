@@ -9,10 +9,8 @@
 ;; Package-Requires: ((evil "1.0.9") (bind-map "0") (smartparens "1.6.1"))
 ;; URL: https://github.com/jaidetree/evil-lisp-state
 ;;
-;; This is jaidetree's fork with Doom Emacs compatibility changes: the
-;; undo/redo commands no longer hard-code undo-tree (Doom ships undo-fu),
-;; and "." toggles lisp state from normal state when
-;; `evil-lisp-state-global' is nil.
+;; jaidetree's fork: backend-aware undo/redo (no hard-coded undo-tree),
+;; and "." toggles lisp state from normal state.
 
 ;; This file is not part of GNU Emacs.
 
@@ -198,10 +196,7 @@ If `evil-lisp-state-global' is non nil then this variable has no effect."
 ;; toggle lisp state
 (define-key evil-lisp-state-map "." 'lisp-state-toggle-lisp-state)
 ;; hjkl
-;; Doom compatibility: bind undo/redo directly in the lisp state map too;
-;; with `evil-lisp-state-global' nil the command table below never binds
-;; them here, and the leader prefix is not the only way to undo once in
-;; the state.
+;; also bound directly here, not just via the leader table below
 (define-key evil-lisp-state-map "u" 'lisp-state-undo)
 (define-key evil-lisp-state-map "\C-r" 'lisp-state-redo)
 (define-key evil-lisp-state-map "h" 'evil-backward-char)
@@ -209,20 +204,14 @@ If `evil-lisp-state-global' is non nil then this variable has no effect."
 (define-key evil-lisp-state-map "k" 'evil-previous-visual-line)
 (define-key evil-lisp-state-map "l" 'evil-forward-char)
 
-;; Doom compatibility: undo/redo used to be hard-coded to undo-tree, which
-;; Doom does not ship (it uses undo-fu). Detect the available backend
-;; instead: undo-fu (Doom), undo-tree (Spacemacs/stock), or plain undo.
-;; Named lisp-state-* so the wrapper macro below generates clean
-;; `evil-lisp-state-undo'/`evil-lisp-state-redo' names.
+;; Backend-aware, unlike upstream's hard-coded undo-tree calls.
 (defun lisp-state-undo (&optional arg)
-  "Undo the last edit, using the best available undo backend."
   (interactive "P")
   (cond ((fboundp 'undo-fu-only-undo) (undo-fu-only-undo arg))
         ((fboundp 'undo-tree-undo) (undo-tree-undo arg))
         (t (undo))))
 
 (defun lisp-state-redo (&optional arg)
-  "Redo the last edit, using the best available undo backend."
   (interactive "P")
   (cond ((fboundp 'undo-fu-only-redo) (undo-fu-only-redo arg))
         ((fboundp 'undo-tree-redo) (undo-tree-redo arg))
@@ -301,11 +290,8 @@ If `evil-lisp-state-global' is non nil then this variable has no effect."
             (define-key evil-lisp-state-major-mode-map ,(kbd key)
               (evil-lisp-state-enter-command ,cmd)))))))
 
-;; Doom compatibility: upstream binds the lisp-state toggle only on the
-;; `lisp' state map, so with `evil-lisp-state-global' nil there is no way
-;; into the state from normal state. Bind it under the leader prefix too
-;; (it must NOT go through `evil-lisp-state-enter-command', which enters
-;; the state first and would make the toggle a no-op).
+;; Toggle also reachable from normal state, not just from inside lisp state.
+;; Must NOT go through `evil-lisp-state-enter-command' (would no-op the toggle).
 (unless evil-lisp-state-global
   (define-key evil-lisp-state-major-mode-map "."
               'lisp-state-toggle-lisp-state))
